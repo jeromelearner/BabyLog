@@ -35,6 +35,11 @@ fun AddLogScreen(
 ) {
     var type by remember { mutableStateOf("MILK") }
     var amountMl by remember { mutableStateOf("") }
+    
+    val isMilkAmountError = remember(type, amountMl) {
+        type == "MILK" && amountMl.isNotEmpty() && (amountMl.toIntOrNull() == null || amountMl.toIntOrNull()!! > 9999)
+    }
+
     var hasPee by remember { mutableStateOf(false) }
     var peeAmount by remember { mutableStateOf("中") }
     var hasPoop by remember { mutableStateOf(false) }
@@ -232,8 +237,18 @@ fun AddLogScreen(
                 "MILK" -> {
                     OutlinedTextField(
                         value = amountMl,
-                        onValueChange = { amountMl = it },
+                        onValueChange = { 
+                            if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                                amountMl = it
+                            }
+                        },
                         label = { Text("奶量 (ml)") },
+                        isError = isMilkAmountError,
+                        supportingText = {
+                            if (isMilkAmountError) {
+                                Text("奶量不能超过 9999 ml")
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -372,48 +387,51 @@ fun AddLogScreen(
                 Text("取消")
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = {
-                val finalEndTime: Long?
-                val finalStartTime: Long
-                
-                if (type == "SLEEP") {
-                    var startDateTime = LocalDateTime.of(selectedDate, fallAsleepTime)
-                    var wakeUpDateTime = LocalDateTime.of(selectedDate, wakeUpTime)
+            Button(
+                onClick = {
+                    val finalEndTime: Long?
+                    val finalStartTime: Long
                     
-                    // 如果睡醒时间早于入睡时间，通常意味着跨天了
-                    if (wakeUpDateTime.isBefore(startDateTime)) {
-                        wakeUpDateTime = wakeUpDateTime.plusDays(1)
+                    if (type == "SLEEP") {
+                        var startDateTime = LocalDateTime.of(selectedDate, fallAsleepTime)
+                        var wakeUpDateTime = LocalDateTime.of(selectedDate, wakeUpTime)
+                        
+                        // 如果睡醒时间早于入睡时间，通常意味着跨天了
+                        if (wakeUpDateTime.isBefore(startDateTime)) {
+                            wakeUpDateTime = wakeUpDateTime.plusDays(1)
+                        }
+                        
+                        finalStartTime = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        finalEndTime = wakeUpDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    } else {
+                        val startDateTime = LocalDateTime.of(selectedDate, selectedTime)
+                        finalStartTime = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        finalEndTime = null
                     }
-                    
-                    finalStartTime = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                    finalEndTime = wakeUpDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                } else {
-                    val startDateTime = LocalDateTime.of(selectedDate, selectedTime)
-                    finalStartTime = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                    finalEndTime = null
-                }
 
-                onSave(
-                    BabyLog(
-                        type = type,
-                        startTime = finalStartTime,
-                        endTime = finalEndTime,
-                        amountMl = amountMl.toIntOrNull(),
-                        hasPee = if (type == "DIAPER") hasPee else null,
-                        peeAmount = if (type == "DIAPER" && hasPee) peeAmount else null,
-                        hasPoop = if (type == "DIAPER") hasPoop else null,
-                        poopDetails = if (type == "DIAPER" && hasPoop) poopDetails else null,
-                        foodContent = if (type == "SOLIDS") foodContent else null,
-                        foodAmount = if (type == "SOLIDS") {
-                            if (foodAmount.isEmpty()) "[$foodPreference]" else "[$foodPreference] $foodAmount"
-                        } else null,
-                        isNightWake = if (type == "SLEEP") {
-                            val showNightWakeOption = fallAsleepTime.hour >= 18 || fallAsleepTime.hour < 6
-                            if (showNightWakeOption) isNightWake else null
-                        } else null
+                    onSave(
+                        BabyLog(
+                            type = type,
+                            startTime = finalStartTime,
+                            endTime = finalEndTime,
+                            amountMl = if (type == "MILK") (amountMl.toIntOrNull() ?: 0) else null,
+                            hasPee = if (type == "DIAPER") hasPee else null,
+                            peeAmount = if (type == "DIAPER" && hasPee) peeAmount else null,
+                            hasPoop = if (type == "DIAPER") hasPoop else null,
+                            poopDetails = if (type == "DIAPER" && hasPoop) poopDetails else null,
+                            foodContent = if (type == "SOLIDS") foodContent else null,
+                            foodAmount = if (type == "SOLIDS") {
+                                if (foodAmount.isEmpty()) "[$foodPreference]" else "[$foodPreference] $foodAmount"
+                            } else null,
+                            isNightWake = if (type == "SLEEP") {
+                                val showNightWakeOption = fallAsleepTime.hour >= 18 || fallAsleepTime.hour < 6
+                                if (showNightWakeOption) isNightWake else false
+                            } else null
+                        )
                     )
-                )
-            }) {
+                },
+                enabled = !isMilkAmountError
+            ) {
                 Text("保存")
             }
         }

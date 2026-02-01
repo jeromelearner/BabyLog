@@ -20,6 +20,14 @@ data class SlotColors(
     val slot4: Int  // 18-24
 )
 
+data class DailySummary(
+    val totalMilkMl: Int = 0,
+    val milkCount: Int = 0,
+    val diaperCount: Int = 0,
+    val solidsCount: Int = 0,
+    val totalSleepDurationHours: Double = 0.0
+)
+
 class HomeViewModel(
     private val repository: LogRepository,
     private val prefs: SharedPreferences
@@ -72,6 +80,44 @@ class HomeViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+    val dailySummary: StateFlow<DailySummary> = filteredLogs
+        .map { logs ->
+            var milkMl = 0
+            var milkCnt = 0
+            var diaperCnt = 0
+            var solidsCnt = 0
+            var sleepMs = 0L
+
+            logs.forEach { log ->
+                when (log.type) {
+                    "MILK" -> {
+                        milkMl += log.amountMl ?: 0
+                        milkCnt++
+                    }
+                    "DIAPER" -> diaperCnt++
+                    "SOLIDS" -> solidsCnt++
+                    "SLEEP" -> {
+                        if (log.endTime != null) {
+                            sleepMs += (log.endTime - log.startTime)
+                        }
+                    }
+                }
+            }
+
+            DailySummary(
+                totalMilkMl = milkMl,
+                milkCount = milkCnt,
+                diaperCount = diaperCnt,
+                solidsCount = solidsCnt,
+                totalSleepDurationHours = sleepMs.toDouble() / (1000 * 60 * 60)
+            )
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = DailySummary()
         )
 
     fun updateSelectedDate(date: LocalDate) {

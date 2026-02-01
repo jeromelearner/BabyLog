@@ -9,11 +9,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wongchoi500.babylog.data.BabyLog
@@ -29,6 +34,7 @@ fun HomeScreen(
 ) {
     val logs by viewModel.filteredLogs.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val dailySummary by viewModel.dailySummary.collectAsStateWithLifecycle()
     val slotColors by viewModel.slotColors.collectAsStateWithLifecycle()
     
     var showAddDialog by remember { mutableStateOf(false) }
@@ -40,12 +46,43 @@ fun HomeScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("宝宝日志 - 时间轴") },
+                    title = { Text("宝宝日志") },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     actions = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                if (selectedDate != LocalDate.now()) {
+                                    Text(
+                                        text = "回到今天",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                        modifier = Modifier.clickable { viewModel.updateSelectedDate(LocalDate.now()) }
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showDatePicker = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = "选择日期",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
                         }
@@ -63,36 +100,34 @@ fun HomeScreen(
                         }
                     }
                 )
-                // 日期选择条
+                // 汇总栏
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    tonalElevation = 2.dp
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { showDatePicker = true }) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "选择日期",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        SummaryItem(
+                            icon = Icons.Default.LocalDrink,
+                            text = "${dailySummary.totalMilkMl}ml/${dailySummary.milkCount}次"
                         )
-                        if (selectedDate != LocalDate.now()) {
-                            Spacer(modifier = Modifier.weight(1f))
-                            TextButton(onClick = { viewModel.updateSelectedDate(LocalDate.now()) }) {
-                                Text("回到今天")
-                            }
-                        }
+                        SummaryItem(
+                            icon = Icons.Default.ChildCare,
+                            text = "${dailySummary.diaperCount}次"
+                        )
+                        SummaryItem(
+                            icon = Icons.Default.Restaurant,
+                            text = "${dailySummary.solidsCount}次"
+                        )
+                        SummaryItem(
+                            icon = Icons.Default.Bedtime,
+                            text = String.format("%.1fh", dailySummary.totalSleepDurationHours)
+                        )
                     }
                 }
             }
@@ -281,5 +316,23 @@ fun ColorSettingsDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SummaryItem(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

@@ -5,10 +5,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LogDao {
-    @Query("SELECT * FROM baby_logs ORDER BY startTime DESC")
+    @Query("SELECT * FROM baby_logs ORDER BY (CASE WHEN type = 'SLEEP' AND endTime IS NOT NULL THEN endTime ELSE startTime END) DESC")
     fun getAllLogs(): Flow<List<BabyLog>>
 
-    @Query("SELECT * FROM baby_logs WHERE startTime >= :start AND startTime < :end ORDER BY startTime DESC")
+    @Query("SELECT * FROM baby_logs WHERE startTime >= :start AND startTime < :end ORDER BY (CASE WHEN type = 'SLEEP' AND endTime IS NOT NULL THEN endTime ELSE startTime END) DESC")
     fun getLogsByDateRange(start: Long, end: Long): Flow<List<BabyLog>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

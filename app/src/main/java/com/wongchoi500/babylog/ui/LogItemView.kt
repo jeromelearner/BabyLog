@@ -25,6 +25,7 @@ fun LogItemView(
     slotColors: SlotColors,
     onLongClick: () -> Unit
 ) {
+    val displayTime = if (log.type == "SLEEP" && log.endTime != null) log.endTime else log.startTime
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -35,7 +36,7 @@ fun LogItemView(
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = getBackgroundColor(log.startTime, slotColors)
+            containerColor = getBackgroundColor(displayTime, slotColors)
         )
     ) {
         Row(
@@ -46,7 +47,7 @@ fun LogItemView(
         ) {
             // 时间显示区域放大
             Text(
-                text = formatTime(log.startTime),
+                text = formatTime(displayTime),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.width(65.dp),
                 color = Color.Black
