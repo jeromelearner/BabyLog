@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,10 +74,15 @@ fun AddLogScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .heightIn(max = 550.dp) // 限制最大高度
+            .padding(24.dp)
+            .heightIn(max = 600.dp)
     ) {
-        Text("添加新记录", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "记录宝宝时刻",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         Column(
@@ -83,30 +90,32 @@ fun AddLogScreen(
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("类型", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "类型",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 types.forEach { t ->
                     val isSelected = type == t
                     Surface(
                         onClick = { type = t },
-                        shape = MaterialTheme.shapes.small,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        ),
-                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        modifier = Modifier.weight(1f).height(40.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = typeLabels[t] ?: t,
                                 style = MaterialTheme.typography.labelLarge,
-                                maxLines = 1,
-                                softWrap = false,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -382,11 +391,19 @@ fun AddLogScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onCancel) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("取消")
             }
-            Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
                     val finalEndTime: Long?
@@ -430,9 +447,11 @@ fun AddLogScreen(
                         )
                     )
                 },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
                 enabled = !isMilkAmountError
             ) {
-                Text("保存")
+                Text("确定")
             }
         }
     }

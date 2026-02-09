@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -17,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -30,26 +33,57 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel
+    viewModel: HomeViewModel,
+    onNavigateToBabyInfo: () -> Unit = {}
 ) {
     val logs by viewModel.filteredLogs.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val dailySummary by viewModel.dailySummary.collectAsStateWithLifecycle()
     val slotColors by viewModel.slotColors.collectAsStateWithLifecycle()
+    val babyNickname = viewModel.babyNickname
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showColorSettings by remember { mutableStateOf(false) }
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
     Scaffold(
+        modifier = Modifier.drawBehind {
+            // 在背景画一些可爱的淡色圆圈
+            drawCircle(
+                color = primaryColor.copy(alpha = 0.05f),
+                radius = 400f,
+                center = Offset(size.width * 0.9f, size.height * 0.1f)
+            )
+            drawCircle(
+                color = secondaryColor.copy(alpha = 0.05f),
+                radius = 300f,
+                center = Offset(size.width * 0.1f, size.height * 0.8f)
+            )
+            drawCircle(
+                color = tertiaryColor.copy(alpha = 0.05f),
+                radius = 200f,
+                center = Offset(size.width * 0.5f, size.height * 0.5f)
+            )
+        },
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("宝宝日志") },
+                    title = { 
+                        Text(
+                            if (babyNickname.isNotEmpty()) "${babyNickname}的日志" else "宝宝日志",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        ) 
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.primary
                     ),
                     actions = {
                         Row(
@@ -64,13 +98,13 @@ fun HomeScreen(
                                 Text(
                                     text = selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 if (selectedDate != LocalDate.now()) {
                                     Text(
                                         text = "回到今天",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                                         modifier = Modifier.clickable { viewModel.updateSelectedDate(LocalDate.now()) }
                                     )
                                 }
@@ -79,61 +113,88 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.CalendarMonth,
                                     contentDescription = "选择日期",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("颜色设置") },
-                                onClick = {
-                                    showMenu = false
-                                    showColorSettings = true
-                                }
-                            )
+                        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "更多选项",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("宝宝信息") },
+                                    onClick = {
+                                        showMenu = false
+                                        onNavigateToBabyInfo()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("颜色设置") },
+                                    onClick = {
+                                        showMenu = false
+                                        showColorSettings = true
+                                    }
+                                )
+                            }
                         }
                     }
                 )
                 // 汇总栏
                 Surface(
-                    color = Color.Transparent,
+                    color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(24.dp)
                     ) {
-                        SummaryItem(
-                            icon = Icons.Default.LocalDrink,
-                            text = "${dailySummary.totalMilkMl}ml/${dailySummary.milkCount}次"
-                        )
-                        SummaryItem(
-                            icon = Icons.Default.ChildCare,
-                            text = "${dailySummary.diaperCount}次"
-                        )
-                        SummaryItem(
-                            icon = Icons.Default.Restaurant,
-                            text = "${dailySummary.solidsCount}次"
-                        )
-                        SummaryItem(
-                            icon = Icons.Default.Bedtime,
-                            text = String.format("%.1fh", dailySummary.totalSleepDurationHours)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SummaryItem(
+                                icon = Icons.Default.LocalDrink,
+                                text = "${dailySummary.totalMilkMl}ml"
+                            )
+                            SummaryItem(
+                                icon = Icons.Default.ChildCare,
+                                text = "${dailySummary.diaperCount}次"
+                            )
+                            SummaryItem(
+                                icon = Icons.Default.Restaurant,
+                                text = "${dailySummary.solidsCount}次"
+                            )
+                            SummaryItem(
+                                icon = Icons.Default.Bedtime,
+                                text = String.format("%.1fh", dailySummary.totalSleepDurationHours)
+                            )
+                        }
                     }
                 }
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(20.dp),
+                elevation = FloatingActionButtonDefaults.elevation(8.dp)
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "添加记录")
             }
         }
@@ -145,7 +206,34 @@ fun HomeScreen(
                     .padding(paddingValues),
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                Text("暂无记录。点击 + 开始。", style = MaterialTheme.typography.bodyLarge)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        modifier = Modifier.size(120.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.ChildCare,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "记录宝宝的成长点滴",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                    Text(
+                        "点击下方的 + 号开始吧",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -321,18 +409,23 @@ fun ColorSettingsDialog(
 
 @Composable
 fun SummaryItem(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(24.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
         )
     }
 }

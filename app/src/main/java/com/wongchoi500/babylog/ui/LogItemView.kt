@@ -3,6 +3,8 @@ package com.wongchoi500.babylog.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -11,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wongchoi500.babylog.data.BabyLog
 import java.time.Instant
@@ -29,38 +32,48 @@ fun LogItemView(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .combinedClickable(
                 onClick = {},
                 onLongClick = onLongClick
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = getBackgroundColor(displayTime, slotColors)
+            containerColor = getBackgroundColor(displayTime, slotColors).copy(alpha = 0.9f)
         )
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 时间显示区域放大
+            // 时间显示
             Text(
                 text = formatTime(displayTime),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.width(65.dp),
-                color = Color.Black
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.width(60.dp),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            Icon(
-                imageVector = getIconForType(log.type),
-                contentDescription = log.type,
-                tint = Color.Black,
-                modifier = Modifier.size(32.dp)
-            )
+            Surface(
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = getIconForType(log.type),
+                        contentDescription = log.type,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.width(16.dp))
             
@@ -73,14 +86,15 @@ fun LogItemView(
                         Text(
                             text = translateType(log.type),
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.Black
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         if (pref.isNotEmpty()) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = pref,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Black
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -88,48 +102,50 @@ fun LogItemView(
                         Text(
                             text = log.foodContent,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     if (amount.isNotEmpty()) {
                         Text(
                             text = amount,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
                 } else if (log.type == "DIAPER") {
                     Text(
                         text = translateType(log.type),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.Black
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (log.hasPee == true) {
                         val peeLabels = mapOf("Small" to "少", "Medium" to "中", "Large" to "多")
                         Text(
                             text = "小便 | ${peeLabels[log.peeAmount] ?: log.peeAmount}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     if (log.hasPoop == true) {
                         Text(
                             text = "大便 | ${log.poopDetails}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 } else {
                     Text(
                         text = translateType(log.type),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.Black
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = getSummary(log),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

@@ -33,6 +33,30 @@ class HomeViewModel(
     private val prefs: SharedPreferences
 ) : ViewModel() {
 
+    val shouldShowWelcome: Boolean
+        get() = !prefs.getBoolean("welcome_completed", false)
+
+    fun markWelcomeCompleted() {
+        prefs.edit().putBoolean("welcome_completed", true).apply()
+    }
+
+    val babyNickname: String
+        get() = prefs.getString("baby_nickname", "") ?: ""
+
+    val babyBirthday: String
+        get() = prefs.getString("baby_birthday", "") ?: ""
+
+    val babyGender: String
+        get() = prefs.getString("baby_gender", "") ?: ""
+
+    fun saveBabyInfo(nickname: String, birthday: String, gender: String) {
+        prefs.edit()
+            .putString("baby_nickname", nickname)
+            .putString("baby_birthday", birthday)
+            .putString("baby_gender", gender)
+            .apply()
+    }
+
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
