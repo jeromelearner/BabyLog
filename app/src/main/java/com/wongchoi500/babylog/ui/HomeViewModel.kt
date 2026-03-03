@@ -11,7 +11,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.Period
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 data class SlotColors(
     val slot1: Int, // 0-6
@@ -46,8 +48,38 @@ class HomeViewModel(
     val babyBirthday: String
         get() = prefs.getString("baby_birthday", "") ?: ""
 
+    val babyAge: String
+        get() {
+            val birthdayStr = babyBirthday
+            if (birthdayStr.isEmpty()) return ""
+            return try {
+                val birthDate = LocalDate.parse(birthdayStr)
+                val currentDate = LocalDate.now()
+                if (birthDate.isAfter(currentDate)) return ""
+                
+                val period = Period.between(birthDate, currentDate)
+                when {
+                    period.years == 0 && period.months == 0 -> {
+                        val days = ChronoUnit.DAYS.between(birthDate, currentDate)
+                        "${days}天"
+                    }
+                    period.years == 0 -> {
+                        "${period.months}月${period.days}天"
+                    }
+                    else -> {
+                        "${period.years}年${period.months}月"
+                    }
+                }
+            } catch (e: Exception) {
+                ""
+            }
+        }
+
     val babyGender: String
         get() = prefs.getString("baby_gender", "") ?: ""
+
+    private val _babyInfoUpdated = MutableStateFlow(0)
+    val babyInfoUpdated: StateFlow<Int> = _babyInfoUpdated.asStateFlow()
 
     fun saveBabyInfo(nickname: String, birthday: String, gender: String) {
         prefs.edit()
@@ -55,6 +87,7 @@ class HomeViewModel(
             .putString("baby_birthday", birthday)
             .putString("baby_gender", gender)
             .apply()
+        _babyInfoUpdated.value++
     }
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())

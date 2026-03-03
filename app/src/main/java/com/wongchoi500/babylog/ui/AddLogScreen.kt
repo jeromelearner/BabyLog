@@ -32,36 +32,59 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddLogScreen(
+    existingLog: BabyLog? = null,
     onSave: (BabyLog) -> Unit,
     onCancel: () -> Unit
 ) {
-    var type by remember { mutableStateOf("MILK") }
-    var amountMl by remember { mutableStateOf("") }
+    var type by remember(existingLog) { mutableStateOf(existingLog?.type ?: "MILK") }
+    var amountMl by remember(existingLog) { mutableStateOf(existingLog?.amountMl?.toString() ?: "") }
     
     val isMilkAmountError = remember(type, amountMl) {
         type == "MILK" && amountMl.isNotEmpty() && (amountMl.toIntOrNull() == null || amountMl.toIntOrNull()!! > 9999)
     }
 
-    var hasPee by remember { mutableStateOf(false) }
-    var peeAmount by remember { mutableStateOf("中") }
-    var hasPoop by remember { mutableStateOf(false) }
-    var poopDetails by remember { mutableStateOf("") }
-    var foodContent by remember { mutableStateOf("") }
-    var foodAmount by remember { mutableStateOf("") }
-    var foodPreference by remember { mutableStateOf("一般") }
+    var hasPee by remember(existingLog) { mutableStateOf(existingLog?.hasPee ?: false) }
+    var peeAmount by remember(existingLog) { mutableStateOf(existingLog?.peeAmount ?: "中") }
+    var hasPoop by remember(existingLog) { mutableStateOf(existingLog?.hasPoop ?: false) }
+    var poopDetails by remember(existingLog) { mutableStateOf(existingLog?.poopDetails ?: "") }
+    var foodContent by remember(existingLog) { mutableStateOf(existingLog?.foodContent ?: "") }
+    
+    // 解析辅食偏好和分量
+    val initialFoodPreference = remember(existingLog) {
+        existingLog?.foodAmount?.substringBefore("]", "")?.removePrefix("[") ?: "一般"
+    }
+    val initialFoodAmount = remember(existingLog) {
+        existingLog?.foodAmount?.substringAfter("] ", "") ?: ""
+    }
+    
+    var foodAmount by remember(existingLog) { mutableStateOf(initialFoodAmount) }
+    var foodPreference by remember(existingLog) { mutableStateOf(initialFoodPreference) }
     
     // 默认日期和时间
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var selectedTime by remember { mutableStateOf(LocalTime.now()) }
+    val initialDateTime = remember(existingLog) {
+        val timestamp = existingLog?.startTime ?: Instant.now().toEpochMilli()
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault())
+    }
+    var selectedDate by remember(existingLog) { mutableStateOf(initialDateTime.toLocalDate()) }
+    var selectedTime by remember(existingLog) { mutableStateOf(initialDateTime.toLocalTime()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePickerForGeneral by remember { mutableStateOf(false) }
 
     // 睡眠专用状态
-    var fallAsleepTime by remember { mutableStateOf(LocalTime.now().minusHours(1)) }
-    var wakeUpTime by remember { mutableStateOf(LocalTime.now()) }
+    val initialFallAsleepTime = remember(existingLog) {
+        val timestamp = existingLog?.startTime ?: Instant.now().minusSeconds(3600).toEpochMilli()
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()).toLocalTime()
+    }
+    val initialWakeUpTime = remember(existingLog) {
+        val timestamp = existingLog?.endTime ?: Instant.now().toEpochMilli()
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()).toLocalTime()
+    }
+    
+    var fallAsleepTime by remember(existingLog) { mutableStateOf(initialFallAsleepTime) }
+    var wakeUpTime by remember(existingLog) { mutableStateOf(initialWakeUpTime) }
     var showTimePickerForFallAsleep by remember { mutableStateOf(false) }
     var showTimePickerForWakeUp by remember { mutableStateOf(false) }
-    var isNightWake by remember { mutableStateOf(false) }
+    var isNightWake by remember(existingLog) { mutableStateOf(existingLog?.isNightWake ?: false) }
 
     val types = listOf("MILK", "DIAPER", "SOLIDS", "SLEEP")
     val typeLabels = mapOf(
@@ -78,7 +101,7 @@ fun AddLogScreen(
             .heightIn(max = 600.dp)
     ) {
         Text(
-            "记录宝宝时刻",
+            if (existingLog != null) (typeLabels[type] ?: type) else "记录宝宝时刻",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -90,39 +113,41 @@ fun AddLogScreen(
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(
-                "类型",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                types.forEach { t ->
-                    val isSelected = type == t
-                    Surface(
-                        onClick = { type = t },
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = typeLabels[t] ?: t,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            if (existingLog == null) {
+                Text(
+                    "类型",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    types.forEach { t ->
+                        val isSelected = type == t
+                        Surface(
+                            onClick = { type = t },
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = typeLabels[t] ?: t,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             Text("日期和时间", style = MaterialTheme.typography.titleMedium)
             Row(
@@ -428,6 +453,7 @@ fun AddLogScreen(
 
                     onSave(
                         BabyLog(
+                            id = existingLog?.id ?: 0,
                             type = type,
                             startTime = finalStartTime,
                             endTime = finalEndTime,

@@ -29,7 +29,7 @@ private val PinkLightColorScheme = lightColorScheme(
 )
 
 private val PinkDarkColorScheme = darkColorScheme(
-    primary = PrimaryDark,
+    primary = FontPinkDark,
     secondary = SecondaryDark,
     tertiary = SoftBlue,
     background = Color(0xFF121212),
@@ -53,7 +53,7 @@ private val BlueLightColorScheme = lightColorScheme(
 )
 
 private val BlueDarkColorScheme = darkColorScheme(
-    primary = PrimaryBlueDark,
+    primary = FontBlueDark,
     secondary = SecondaryBlueDark,
     tertiary = SoftGreen,
     background = Color(0xFF121212),

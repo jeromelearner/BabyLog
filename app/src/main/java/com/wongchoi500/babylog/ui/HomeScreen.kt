@@ -40,9 +40,13 @@ fun HomeScreen(
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val dailySummary by viewModel.dailySummary.collectAsStateWithLifecycle()
     val slotColors by viewModel.slotColors.collectAsStateWithLifecycle()
-    val babyNickname = viewModel.babyNickname
+    val babyInfoUpdated by viewModel.babyInfoUpdated.collectAsStateWithLifecycle()
+    
+    val babyNickname = remember(babyInfoUpdated) { viewModel.babyNickname }
+    val babyAge = remember(babyInfoUpdated) { viewModel.babyAge }
     
     var showAddDialog by remember { mutableStateOf(false) }
+    var logToEdit by remember { mutableStateOf<BabyLog?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showColorSettings by remember { mutableStateOf(false) }
@@ -73,13 +77,29 @@ fun HomeScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            if (babyNickname.isNotEmpty()) "${babyNickname}的日志" else "宝宝日志",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    title = {
+                        if (babyAge.isNotEmpty()) {
+                            Column {
+                                Text(
+                                    if (babyNickname.isNotEmpty()) "${babyNickname}的日志" else "宝宝日志",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                )
+                                Text(
+                                    text = babyAge,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                )
+                            }
+                        } else {
+                            Text(
+                                if (babyNickname.isNotEmpty()) "${babyNickname}的日志" else "宝宝日志",
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
                             )
-                        ) 
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
@@ -189,7 +209,10 @@ fun HomeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = {
+                    logToEdit = null
+                    showAddDialog = true
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(20.dp),
@@ -247,6 +270,10 @@ fun HomeScreen(
                     LogItemView(
                         log = log,
                         slotColors = slotColors,
+                        onClick = {
+                            logToEdit = log
+                            showAddDialog = true
+                        },
                         onLongClick = { showDeleteConfirm = true }
                     )
 
@@ -287,6 +314,7 @@ fun HomeScreen(
                         .wrapContentHeight()
                 ) {
                     AddLogScreen(
+                        existingLog = logToEdit,
                         onSave = { newLog ->
                             viewModel.addLog(newLog)
                             showAddDialog = false

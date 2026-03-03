@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter
 fun LogItemView(
     log: BabyLog,
     slotColors: SlotColors,
+    onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
     val displayTime = if (log.type == "SLEEP" && log.endTime != null) log.endTime else log.startTime
@@ -34,7 +35,7 @@ fun LogItemView(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .combinedClickable(
-                onClick = {},
+                onClick = onClick,
                 onLongClick = onLongClick
             ),
         shape = RoundedCornerShape(24.dp),
@@ -55,7 +56,7 @@ fun LogItemView(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.width(60.dp),
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.Black
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -87,14 +88,14 @@ fun LogItemView(
                             text = translateType(log.type),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.Black
                         )
                         if (pref.isNotEmpty()) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = pref,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = Color.Black
                             )
                         }
                     }
@@ -102,14 +103,14 @@ fun LogItemView(
                         Text(
                             text = log.foodContent,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.Black
                         )
                     }
                     if (amount.isNotEmpty()) {
                         Text(
                             text = amount,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = Color.Black.copy(alpha = 0.7f)
                         )
                     }
                 } else if (log.type == "DIAPER") {
@@ -117,21 +118,21 @@ fun LogItemView(
                         text = translateType(log.type),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.Black
                     )
                     if (log.hasPee == true) {
                         val peeLabels = mapOf("Small" to "少", "Medium" to "中", "Large" to "多")
                         Text(
                             text = "小便 | ${peeLabels[log.peeAmount] ?: log.peeAmount}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.Black
                         )
                     }
                     if (log.hasPoop == true) {
                         Text(
                             text = "大便 | ${log.poopDetails}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.Black
                         )
                     }
                 } else {
@@ -139,13 +140,13 @@ fun LogItemView(
                         text = translateType(log.type),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = getSummary(log),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.Black
                     )
                 }
             }
