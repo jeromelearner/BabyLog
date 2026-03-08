@@ -9,6 +9,10 @@ class LogRepository(private val logDao: LogDao) {
         return logDao.getLogsByDateRange(start, end)
     }
 
+    suspend fun getAllLogsList(): List<BabyLog> {
+        return logDao.getAllLogsList()
+    }
+
     suspend fun insert(log: BabyLog) {
         logDao.insertLog(log)
     }

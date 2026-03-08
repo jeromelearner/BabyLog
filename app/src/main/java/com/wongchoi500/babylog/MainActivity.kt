@@ -21,6 +21,7 @@ import com.wongchoi500.babylog.data.LogRepository
 import com.wongchoi500.babylog.ui.BabyInfoScreen
 import com.wongchoi500.babylog.ui.HomeScreen
 import com.wongchoi500.babylog.ui.HomeViewModel
+import com.wongchoi500.babylog.ui.StatisticsScreen
 import com.wongchoi500.babylog.ui.WelcomeScreen
 import com.wongchoi500.babylog.ui.theme.BabyLogTheme
 
@@ -70,6 +71,17 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateToBabyInfo = {
                                     navController.navigate("baby_info")
+                                },
+                                onNavigateToStatistics = {
+                                    navController.navigate("statistics")
+                                }
+                            )
+                        }
+                        composable("statistics") {
+                            StatisticsScreen(
+                                viewModel = viewModel,
+                                onBack = {
+                                    navController.popBackStack()
                                 }
                             )
                         }

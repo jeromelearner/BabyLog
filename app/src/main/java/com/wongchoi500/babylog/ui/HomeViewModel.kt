@@ -1,17 +1,27 @@
 package com.wongchoi500.babylog.ui
 
+import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.wongchoi500.babylog.data.BabyLog
+import com.wongchoi500.babylog.data.BabyProfileExport
+import com.wongchoi500.babylog.data.ExportPackage
 import com.wongchoi500.babylog.data.LogRepository
+import com.wongchoi500.babylog.data.SlotColorsExport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.FileOutputStream
 import java.time.LocalDate
 import java.time.Period
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
@@ -48,32 +58,34 @@ class HomeViewModel(
     val babyBirthday: String
         get() = prefs.getString("baby_birthday", "") ?: ""
 
-    val babyAge: String
-        get() {
-            val birthdayStr = babyBirthday
-            if (birthdayStr.isEmpty()) return ""
-            return try {
-                val birthDate = LocalDate.parse(birthdayStr)
-                val currentDate = LocalDate.now()
-                if (birthDate.isAfter(currentDate)) return ""
-                
-                val period = Period.between(birthDate, currentDate)
-                when {
-                    period.years == 0 && period.months == 0 -> {
-                        val days = ChronoUnit.DAYS.between(birthDate, currentDate)
-                        "${days}天"
-                    }
-                    period.years == 0 -> {
-                        "${period.months}月${period.days}天"
-                    }
-                    else -> {
-                        "${period.years}年${period.months}月"
-                    }
+    private val _babyAge = MutableStateFlow(calculateBabyAge())
+    val babyAge: StateFlow<String> = _babyAge.asStateFlow()
+
+    private fun calculateBabyAge(): String {
+        val birthdayStr = babyBirthday
+        if (birthdayStr.isEmpty()) return ""
+        return try {
+            val birthDate = LocalDate.parse(birthdayStr)
+            val currentDate = LocalDate.now()
+            if (birthDate.isAfter(currentDate)) return ""
+            
+            val period = Period.between(birthDate, currentDate)
+            when {
+                period.years == 0 && period.months == 0 -> {
+                    val days = ChronoUnit.DAYS.between(birthDate, currentDate)
+                    "${days}天"
                 }
-            } catch (e: Exception) {
-                ""
+                period.years == 0 -> {
+                    "${period.months}月${period.days}天"
+                }
+                else -> {
+                    "${period.years}年${period.months}月"
+                }
             }
+        } catch (e: Exception) {
+            ""
         }
+    }
 
     val babyGender: String
         get() = prefs.getString("baby_gender", "") ?: ""
@@ -87,6 +99,7 @@ class HomeViewModel(
             .putString("baby_birthday", birthday)
             .putString("baby_gender", gender)
             .apply()
+        _babyAge.value = calculateBabyAge()
         _babyInfoUpdated.value++
     }
 
@@ -181,6 +194,27 @@ class HomeViewModel(
         _selectedDate.value = date
     }
 
+    private val _selectedMonth = MutableStateFlow(YearMonth.now())
+    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+
+    fun updateSelectedMonth(month: YearMonth) {
+        if (month.isAfter(YearMonth.now())) return
+        _selectedMonth.value = month
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val monthlyLogs = _selectedMonth
+        .flatMapLatest { yearMonth ->
+            val startOfMonth = yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val endOfMonth = yearMonth.atEndOfMonth().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            repository.getLogsByDateRange(startOfMonth, endOfMonth)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     fun addLog(log: BabyLog) {
         viewModelScope.launch {
             repository.insert(log)
@@ -190,6 +224,91 @@ class HomeViewModel(
     fun deleteLog(log: BabyLog) {
         viewModelScope.launch {
             repository.delete(log)
+        }
+    }
+
+    fun exportData(context: Context, onResult: (Uri?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val logs = repository.getAllLogsList()
+                val profile = BabyProfileExport(babyNickname, babyBirthday, babyGender)
+                val colors = SlotColorsExport(
+                    _slotColors.value.slot1,
+                    _slotColors.value.slot2,
+                    _slotColors.value.slot3,
+                    _slotColors.value.slot4
+                )
+                val exportPackage = ExportPackage(
+                    babyProfile = profile,
+                    slotColors = colors,
+                    logs = logs
+                )
+
+                val jsonString = Json.encodeToString(exportPackage)
+                val file = File(context.cacheDir, "babylog_backup.json")
+                file.writeText(jsonString)
+
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+                onResult(uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(null)
+            }
+        }
+    }
+
+    fun importData(context: Context, uri: Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                if (jsonString == null) {
+                    onResult(false)
+                    return@launch
+                }
+
+                val importPackage: ExportPackage = Json.decodeFromString(jsonString)
+
+                // 1. 合并宝宝信息
+                if (importPackage.babyProfile != null && babyNickname.isEmpty()) {
+                    saveBabyInfo(
+                        importPackage.babyProfile.nickname,
+                        importPackage.babyProfile.birthday,
+                        importPackage.babyProfile.gender
+                    )
+                }
+
+                // 2. 合并颜色设置
+                val colors = importPackage.slotColors
+                if (colors != null) {
+                    prefs.edit()
+                        .putInt("slot1", colors.slot1)
+                        .putInt("slot2", colors.slot2)
+                        .putInt("slot3", colors.slot3)
+                        .putInt("slot4", colors.slot4)
+                        .apply()
+                    _slotColors.value = loadColors()
+                }
+
+                // 3. 合并日志
+                val existingLogs = repository.getAllLogsList()
+                val importedLogs = importPackage.logs
+                val newLogs = importedLogs.filter { newLog ->
+                    existingLogs.none { it.type == newLog.type && it.startTime == newLog.startTime }
+                }
+
+                newLogs.forEach {
+                    repository.insert(it.copy(id = 0))
+                }
+
+                onResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(false)
+            }
         }
     }
 

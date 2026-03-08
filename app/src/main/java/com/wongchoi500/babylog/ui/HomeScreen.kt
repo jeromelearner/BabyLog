@@ -1,5 +1,9 @@
 package com.wongchoi500.babylog.ui
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,9 +26,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wongchoi500.babylog.data.BabyLog
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -34,28 +40,50 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onNavigateToBabyInfo: () -> Unit = {}
+    onNavigateToBabyInfo: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {}
 ) {
     val logs by viewModel.filteredLogs.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val dailySummary by viewModel.dailySummary.collectAsStateWithLifecycle()
     val slotColors by viewModel.slotColors.collectAsStateWithLifecycle()
+    val babyAge by viewModel.babyAge.collectAsStateWithLifecycle()
     val babyInfoUpdated by viewModel.babyInfoUpdated.collectAsStateWithLifecycle()
     
     val babyNickname = remember(babyInfoUpdated) { viewModel.babyNickname }
-    val babyAge = remember(babyInfoUpdated) { viewModel.babyAge }
     
     var showAddDialog by remember { mutableStateOf(false) }
     var logToEdit by remember { mutableStateOf<BabyLog?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showColorSettings by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.importData(context, it) { success ->
+                scope.launch {
+                    if (success) {
+                        snackbarHostState.showSnackbar("数据导入成功")
+                    } else {
+                        snackbarHostState.showSnackbar("导入失败，请检查文件格式")
+                    }
+                }
+            }
+        }
+    }
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         modifier = Modifier.drawBehind {
             // 在背景画一些可爱的淡色圆圈
             drawCircle(
@@ -161,6 +189,41 @@ fun HomeScreen(
                                     onClick = {
                                         showMenu = false
                                         showColorSettings = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("数据统计") },
+                                    onClick = {
+                                        showMenu = false
+                                        onNavigateToStatistics()
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("导出数据") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.exportData(context) { uri ->
+                                            if (uri != null) {
+                                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "application/json"
+                                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(Intent.createChooser(intent, "分享导出文件"))
+                                            } else {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("导出失败")
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("导入数据") },
+                                    onClick = {
+                                        showMenu = false
+                                        importLauncher.launch("application/json")
                                     }
                                 )
                             }
