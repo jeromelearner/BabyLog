@@ -1,5 +1,6 @@
 package com.wongchoi500.babylog.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -63,7 +64,16 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = object : ActivityResultContracts.GetContent() {
+            override fun createIntent(context: Context, input: String): Intent {
+                return super.createIntent(context, input).apply {
+                    // 在文件浏览器中自动搜索 babylog_backup，支持多个可能的 Extra 参数以增强兼容性
+                    putExtra("android.content.extra.CONTENT_QUERY", "babylog_backup")
+                    putExtra("android.provider.extra.QUERY", "babylog_backup")
+                    putExtra("query", "babylog_backup")
+                }
+            }
+        }
     ) { uri: Uri? ->
         uri?.let {
             viewModel.importData(context, it) { success ->

@@ -20,9 +20,11 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Period
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 data class SlotColors(
@@ -245,7 +247,18 @@ class HomeViewModel(
                 )
 
                 val jsonString = Json.encodeToString(exportPackage)
-                val file = File(context.cacheDir, "babylog_backup.json")
+                val formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm")
+                val timestamp = LocalDateTime.now().format(formatter)
+                val fileName = "babylog_backup_$timestamp.json"
+
+                // 清理旧的备份文件
+                context.cacheDir.listFiles()?.forEach {
+                    if (it.name.startsWith("babylog_backup") && it.name.endsWith(".json")) {
+                        it.delete()
+                    }
+                }
+
+                val file = File(context.cacheDir, fileName)
                 file.writeText(jsonString)
 
                 val uri = androidx.core.content.FileProvider.getUriForFile(
